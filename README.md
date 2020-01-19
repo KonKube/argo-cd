@@ -2,6 +2,18 @@
 [![codecov](https://codecov.io/gh/argoproj/argo-cd/branch/master/graph/badge.svg)](https://codecov.io/gh/argoproj/argo-cd)
 [![Release Version](https://img.shields.io/github/v/release/argoproj/argo-cd?label=argo-cd)](https://github.com/argoproj/argo-cd/releases/latest)
 
+# How to build
+
+  * VERSION=v1.4.0
+  * git checkout tags/$VERSION
+  * docker buildx build --platform linux/amd64,linux/arm64 -t konkube/argocd:$VERSION . --push
+
+## Source/Inspiration/Copied from :)
+
+  * [argoproj](https://github.com/argoproj/argo-cd)
+  * [cyrilix](https://github.com/cyrilix/docker-argocd)
+  * [phillebaba](https://github.com/phillebaba/argo-cd/tree/feature/arm)
+
 # Argo CD - Declarative Continuous Delivery for Kubernetes
 
 ## What is Argo CD?
