@@ -5,6 +5,8 @@ ARG BASE_IMAGE=debian:10-slim
 # Also used as the image in CI jobs so needs all dependencies
 ####################################################################################################
 FROM golang:1.12.6 as builder
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 
 RUN echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
 
@@ -38,6 +40,8 @@ RUN ./install.sh aws-iam-authenticator-linux
 # Argo CD Base - used as the base for both the release and dev argocd images
 ####################################################################################################
 FROM $BASE_IMAGE as argocd-base
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 
 USER root
 
@@ -67,7 +71,7 @@ COPY uid_entrypoint.sh /usr/local/bin/uid_entrypoint.sh
 # support for mounting configuration from a configmap
 RUN mkdir -p /app/config/ssh && \
     touch /app/config/ssh/ssh_known_hosts && \
-    ln -s /app/config/ssh/ssh_known_hosts /etc/ssh/ssh_known_hosts 
+    ln -s /app/config/ssh/ssh_known_hosts /etc/ssh/ssh_known_hosts
 
 RUN mkdir -p /app/config/tls
 
@@ -81,11 +85,13 @@ WORKDIR /home/argocd
 # Argo CD UI stage
 ####################################################################################################
 FROM node:11.15.0 as argocd-ui
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 
 WORKDIR /src
 ADD ["ui/package.json", "ui/yarn.lock", "./"]
 
-RUN yarn install
+RUN yarn install --network-timeout 1000000
 
 ADD ["ui/", "."]
 
@@ -97,6 +103,8 @@ RUN NODE_ENV='production' yarn build
 # Argo CD Build stage which performs the actual build of Argo CD binaries
 ####################################################################################################
 FROM golang:1.12.6 as argocd-build
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 
 COPY --from=builder /usr/local/bin/dep /usr/local/bin/dep
 COPY --from=builder /usr/local/bin/packr /usr/local/bin/packr
@@ -114,14 +122,17 @@ RUN cd ${GOPATH}/src/dummy && \
 # Perform the build
 WORKDIR /go/src/github.com/argoproj/argo-cd
 COPY . .
-RUN make cli server controller repo-server argocd-util && \
-    make CLI_NAME=argocd-darwin-amd64 GOOS=darwin cli
+RUN make cli server controller repo-server argocd-util
+#RUN make cli server controller repo-server argocd-util && \
+#    make CLI_NAME=argocd-darwin-amd64 GOOS=darwin cli
 
 
 ####################################################################################################
 # Final image
 ####################################################################################################
 FROM argocd-base
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
 COPY --from=argocd-build /go/src/github.com/argoproj/argo-cd/dist/argocd* /usr/local/bin/
 COPY --from=argocd-ui ./src/dist/app /shared/app
-
